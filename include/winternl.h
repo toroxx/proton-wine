@@ -2534,9 +2534,9 @@ typedef struct _MEMORY_IMAGE_INFORMATION
 } MEMORY_IMAGE_INFORMATION, *PMEMORY_IMAGE_INFORMATION;
 
 /* Prevent duplicate definition when patches or other headers add this type */
-#ifndef _MEMORY_FEX_STATS_SHM_INFORMATION
-#define _MEMORY_FEX_STATS_SHM_INFORMATION
-typedef struct _MEMORY_FEX_STATS_SHM_INFORMATION
+#ifndef HAVE_MEMORY_FEX_STATS_SHM_INFORMATION
+#define HAVE_MEMORY_FEX_STATS_SHM_INFORMATION
+typedef struct MEMORY_FEX_STATS_SHM_INFORMATION
 {
     void *shm_base;
     SIZE_T map_size;
