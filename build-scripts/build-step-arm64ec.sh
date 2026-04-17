@@ -1,6 +1,12 @@
 #!/bin/bash
 
+set -euo pipefail
+
 export ARCH="aarch64"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Ensure we run from project root so Makefile/configure are found
+cd "$PROJECT_ROOT"
 export WIN_ARCH="arm64ec,aarch64,i386"
 export OUTPUT_DIR="$HOME/compiled-files-aarch64"
 
@@ -259,12 +265,37 @@ do
     mkdir -p $OUTPUT_DIR/lib
     mkdir -p $OUTPUT_DIR/share
     mkdir -p $install_dir
+    if [ ! -f Makefile ]; then
+      echo "Error: Makefile not found. Did configure succeed?" 1>&2
+      exit 1
+    fi
+
     make install -j$(nproc)
-    cp -r $install_dir/bin/wine* $OUTPUT_DIR/bin
-    cp -r $install_dir/bin/reg* $OUTPUT_DIR/bin
-    cp -r $install_dir/bin/msi* $OUTPUT_DIR/bin
-    cp -r $install_dir/bin/notepad $OUTPUT_DIR/bin
-    cp -r $install_dir/lib/wine  $OUTPUT_DIR/lib
-    cp -r $install_dir/share/wine  $OUTPUT_DIR/share
+
+    if compgen -G "$install_dir/bin/wine*" > /dev/null; then
+      cp -r $install_dir/bin/wine* $OUTPUT_DIR/bin || true
+    else
+      echo "Warning: no wine binaries in $install_dir/bin" 1>&2
+    fi
+
+    if compgen -G "$install_dir/bin/reg*" > /dev/null; then
+      cp -r $install_dir/bin/reg* $OUTPUT_DIR/bin || true
+    fi
+
+    if compgen -G "$install_dir/bin/msi*" > /dev/null; then
+      cp -r $install_dir/bin/msi* $OUTPUT_DIR/bin || true
+    fi
+
+    if [ -f "$install_dir/bin/notepad" ]; then
+      cp -r $install_dir/bin/notepad $OUTPUT_DIR/bin || true
+    fi
+
+    if [ -d "$install_dir/lib/wine" ]; then
+      cp -r $install_dir/lib/wine  $OUTPUT_DIR/lib || true
+    fi
+
+    if [ -d "$install_dir/share/wine" ]; then
+      cp -r $install_dir/share/wine  $OUTPUT_DIR/share || true
+    fi
   fi
 done
