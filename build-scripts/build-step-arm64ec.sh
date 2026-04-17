@@ -88,14 +88,15 @@ do
 
   if [ "$arg" == "--configure" ];
   then
-    # Detect whether fontconfig is available for the target (via pkg-config)
-    WITH_FONTCONFIG="--with-fontconfig"
+    # Detect whether fontconfig is available for the TARGET (check staged deps only)
+    WITH_FONTCONFIG="--without-fontconfig"
     if command -v pkg-config >/dev/null 2>&1; then
-      if ! PKG_CONFIG_LIBDIR="$PKG_CONFIG_LIBDIR" pkg-config --exists fontconfig; then
-        echo "fontconfig not found for target; configuring without fontconfig support"
-        WITH_FONTCONFIG="--without-fontconfig"
+      TARGET_PKG_CONFIG_LIBDIR="$deps/lib/pkgconfig:$deps/share/pkgconfig"
+      if PKG_CONFIG_LIBDIR="$TARGET_PKG_CONFIG_LIBDIR" pkg-config --exists fontconfig; then
+        echo "fontconfig found in staged deps; enabling fontconfig support"
+        WITH_FONTCONFIG="--with-fontconfig"
       else
-        echo "fontconfig found; enabling fontconfig support"
+        echo "fontconfig NOT found in staged deps ($deps); configuring without fontconfig"
       fi
     fi
 
