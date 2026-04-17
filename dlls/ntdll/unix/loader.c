@@ -2450,7 +2450,11 @@ static void start_main_thread(void)
     set_thread_teb( teb );
 #endif
 
+#ifdef M_PERTURB
     mallopt( M_PERTURB, 0xff );
+#else
+    /* M_PERTURB not available on this platform (e.g. Android Bionic); skip */
+#endif
     init_startup_info();
     *(ULONG_PTR *)&peb->CloudFileFlags = get_image_address();
     set_load_order_app_name( main_wargv[0] );
@@ -2459,7 +2463,9 @@ static void start_main_thread(void)
     load_ntdll();
     load_wow64_ntdll( main_image_info.Machine );
     load_apiset_dll();
+#ifdef M_PERTURB
     mallopt( M_PERTURB, 0 );
+#endif
     server_init_process_done();
 }
 
