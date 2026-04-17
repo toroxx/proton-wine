@@ -53,6 +53,8 @@ jobs:
             libfreetype6-dev:i386 \
             libpng-dev \
             libpng-dev:i386 \
+            libfontconfig1-dev \
+            libfontconfig1-dev:i386 \
             zlib1g-dev \
             zlib1g-dev:i386
       
