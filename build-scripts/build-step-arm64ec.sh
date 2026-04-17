@@ -59,20 +59,29 @@ do
     PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
     if [ -d "$PROJECT_ROOT/android/android_sysvshm" ]; then
-        echo "Building android_sysvshm library..."
-        cd "$PROJECT_ROOT/android/android_sysvshm"
-        ./build-aarch64.sh
-        if [ $? -eq 0 ]; then
-            echo "android_sysvshm built successfully"
-            # Copy the library to deps/lib for linking
-            mkdir -p "$deps/lib"
-            cp build-aarch64/libandroid-sysvshm.so "$deps/lib/"
-            echo "Copied libandroid-sysvshm.so to $deps/lib/"
+    echo "Building android_sysvshm library..."
+    cd "$PROJECT_ROOT/android/android_sysvshm"
+    if [ ! -f build-aarch64.sh ]; then
+      echo "Error: build-aarch64.sh not found in android/android_sysvshm" 1>&2
+    else
+      # Run via bash to avoid relying on executable bit
+      bash build-aarch64.sh
+      if [ $? -eq 0 ]; then
+        echo "android_sysvshm built successfully"
+        # Copy the library to deps/lib for linking
+        mkdir -p "$deps/lib"
+        if [ -f build-aarch64/libandroid-sysvshm.so ]; then
+          cp build-aarch64/libandroid-sysvshm.so "$deps/lib/"
+          echo "Copied libandroid-sysvshm.so to $deps/lib/"
         else
-            echo "Warning: android_sysvshm build failed"
+          echo "Warning: built lib not found: build-aarch64/libandroid-sysvshm.so" 1>&2
         fi
-        cd "$PROJECT_ROOT"
+      else
+        echo "Warning: android_sysvshm build failed"
+      fi
     fi
+    cd "$PROJECT_ROOT"
+  fi
   fi
 
   if [ "$arg" == "--configure" ];
