@@ -88,6 +88,17 @@ do
 
   if [ "$arg" == "--configure" ];
   then
+    # Detect whether fontconfig is available for the target (via pkg-config)
+    WITH_FONTCONFIG="--with-fontconfig"
+    if command -v pkg-config >/dev/null 2>&1; then
+      if ! PKG_CONFIG_LIBDIR="$PKG_CONFIG_LIBDIR" pkg-config --exists fontconfig; then
+        echo "fontconfig not found for target; configuring without fontconfig support"
+        WITH_FONTCONFIG="--without-fontconfig"
+      else
+        echo "fontconfig found; enabling fontconfig support"
+      fi
+    fi
+
     ./configure \
       --enable-archs=$WIN_ARCH \
       --host=$TARGET \
@@ -109,7 +120,7 @@ do
       --without-cups \
       --without-dbus \
       --without-ffmpeg \
-      --with-fontconfig \
+      $WITH_FONTCONFIG \
       --with-freetype \
       --without-gcrypt \
       --without-gettext \
