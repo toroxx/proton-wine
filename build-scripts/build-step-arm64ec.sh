@@ -257,9 +257,29 @@ do
     )
 
     for patch in "${PATCHES[@]}"; do
-#      if git apply --check ./android/patches/$patch 2>/dev/null; then
-        git apply ./android/patches/$patch
-#      fi
+      PATCH_PATH="./android/patches/$patch"
+      if [ ! -f "$PATCH_PATH" ]; then
+        echo "Warning: patch file not found: $PATCH_PATH" 1>&2
+        continue
+      fi
+
+      echo "Applying patch: $patch"
+      # First check whether it applies cleanly
+      if git apply --check "$PATCH_PATH" 2>/dev/null; then
+        if git apply "$PATCH_PATH"; then
+          echo "Applied $patch"
+        else
+          echo "Warning: git apply failed for $patch despite check passing; attempting with --reject" 1>&2
+          git apply --reject --whitespace=fix "$PATCH_PATH" || echo "Failed to apply $patch even with --reject; skipping" 1>&2
+        fi
+      else
+        echo "Patch $patch does not apply cleanly; attempting with --reject/whitespace fix" 1>&2
+        if git apply --reject --whitespace=fix "$PATCH_PATH"; then
+          echo "Partially applied $patch (check .rej files)"
+        else
+          echo "Skipping $patch; it could not be applied" 1>&2
+        fi
+      fi
     done
 
     # Diagnostic: check if fontconfig is visible to pkg-config
