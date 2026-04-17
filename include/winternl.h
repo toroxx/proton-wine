@@ -2533,15 +2533,7 @@ typedef struct _MEMORY_IMAGE_INFORMATION
     };
 } MEMORY_IMAGE_INFORMATION, *PMEMORY_IMAGE_INFORMATION;
 
-/* Prevent duplicate definition when patches or other headers add this type */
-#ifndef HAVE_MEMORY_FEX_STATS_SHM_INFORMATION
-#define HAVE_MEMORY_FEX_STATS_SHM_INFORMATION
-typedef struct MEMORY_FEX_STATS_SHM_INFORMATION
-{
-    void *shm_base;
-    SIZE_T map_size;
-} MEMORY_FEX_STATS_SHM_INFORMATION, *PMEMORY_FEX_STATS_SHM_INFORMATION;
-#endif
+/* MEMORY_FEX_STATS_SHM_INFORMATION is defined by test-bylaws patch when present */
 
 typedef enum _MUTANT_INFORMATION_CLASS
 {
