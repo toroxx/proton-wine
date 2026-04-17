@@ -29,7 +29,9 @@ export RANLIB=$TOOLCHAIN/llvm-ranlib
 export STRIP=$TOOLCHAIN/llvm-strip
 export DLLTOOL=$LLVM_MINGW_TOOLCHAIN/llvm-dlltool
 
-export PKG_CONFIG_LIBDIR=$deps/lib/pkgconfig:$deps/share/pkgconfig
+# Ensure pkg-config can find both staged deps and system packages
+SYSTEM_PKGCONF="/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+export PKG_CONFIG_LIBDIR="$deps/lib/pkgconfig:$deps/share/pkgconfig:$SYSTEM_PKGCONF"
 export ACLOCAL_PATH=$deps/lib/aclocal:$deps/share/aclocal
 export CPPFLAGS="-I$deps/include --sysroot=$TOOLCHAIN/../sysroot"
 
@@ -255,6 +257,21 @@ do
         git apply ./android/patches/$patch
 #      fi
     done
+
+    # Diagnostic: check if fontconfig is visible to pkg-config
+    if command -v pkg-config >/dev/null 2>&1; then
+      if pkg-config --exists fontconfig; then
+        echo "pkg-config: found fontconfig -> $(pkg-config --modversion fontconfig)"
+      else
+        echo "pkg-config: fontconfig NOT found"
+        echo "pkg-config pc_path: $(pkg-config --variable pc_path pkg-config 2>/dev/null || echo unknown)"
+        echo "PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR"
+        echo "Listing system pkgconfig dirs:"
+        for d in /usr/lib/pkgconfig /usr/lib/x86_64-linux-gnu/pkgconfig /usr/share/pkgconfig /usr/lib/i386-linux-gnu/pkgconfig; do
+          echo "- $d ->"; ls -la "$d" || echo "(not present)"
+        done
+      fi
+    fi
   fi
 
   if [ "$arg" == "--build" ]
