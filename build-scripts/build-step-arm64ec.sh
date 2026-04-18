@@ -256,6 +256,21 @@ do
 #      "test-bylaws/tools_makedep_c.patch"
     )
 
+    # If building for aarch64 host, skip x86_64-specific patches to avoid
+    # compiling x86_64-only sources with the aarch64 toolchain.
+    if [ "$ARCH" = "aarch64" ]; then
+      FILTERED_PATCHES=()
+      for p in "${PATCHES[@]}"; do
+        case "$p" in
+          *x86_64*|*signal_x86_64* )
+            echo "Skipping x86_64 patch for aarch64 build: $p"
+            ;;
+          *) FILTERED_PATCHES+=("$p") ;;
+        esac
+      done
+      PATCHES=("${FILTERED_PATCHES[@]}")
+    fi
+
     for patch in "${PATCHES[@]}"; do
       PATCH_PATH="./android/patches/$patch"
       if [ ! -f "$PATCH_PATH" ]; then
@@ -281,6 +296,19 @@ do
         fi
       fi
     done
+
+    # If building for aarch64, remove x86_64-only source entries from
+    # generated Makefiles so the aarch64 toolchain isn't asked to compile
+    # x86_64 sources (quick CI workaround).
+    if [ "$ARCH" = "aarch64" ]; then
+      echo "Removing x86_64-only source entries from Makefiles for aarch64 build"
+      FILES=("dlls/ntdll/Makefile.in" "dlls/ntdll/Makefile" "dlls/ntdll/unix/Makefile.in" "dlls/ntdll/unix/Makefile")
+      for f in "${FILES[@]}"; do
+        if [ -f "$f" ]; then
+          sed -i.bak '/signal_x86_64.c/d' "$f" || true
+        fi
+      done
+    fi
 
     # Diagnostic: check if fontconfig is visible to pkg-config
     if command -v pkg-config >/dev/null 2>&1; then
