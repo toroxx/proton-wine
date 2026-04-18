@@ -532,17 +532,27 @@ NTSTATUS WINAPI wow64_NtMapViewOfSectionEx( UINT *args )
  */
 NTSTATUS WINAPI wow64_NtProtectVirtualMemory( UINT *args )
 {
-    HANDLE process = get_handle( &args );
-    ULONG *addr32 = get_ptr( &args );
-    ULONG *size32 = get_ptr( &args );
-    ULONG new_prot = get_ulong( &args );
-    ULONG *old_prot_ptr = get_ptr( &args );
-
-    void *addr = ULongToPtr( *addr32 );
-    SIZE_T size = *size32;
-    ULONG old_prot = *old_prot_ptr;
-    BOOL is_current = RtlIsCurrentProcess( process );
+    HANDLE process;
+    ULONG *addr32;
+    ULONG *size32;
+    ULONG new_prot;
+    ULONG *old_prot_ptr;
+    void *addr;
+    SIZE_T size;
+    ULONG old_prot;
+    BOOL is_current;
     NTSTATUS status;
+
+    process = get_handle( &args );
+    addr32 = get_ptr( &args );
+    size32 = get_ptr( &args );
+    new_prot = get_ulong( &args );
+    old_prot_ptr = get_ptr( &args );
+
+    addr = ULongToPtr( *addr32 );
+    size = *size32;
+    old_prot = *old_prot_ptr;
+    is_current = RtlIsCurrentProcess( process );
 
     if (!is_current) send_cross_process_notification( process, CrossProcessPreVirtualProtect,
                                                       addr, size, 2, new_prot, 0 );

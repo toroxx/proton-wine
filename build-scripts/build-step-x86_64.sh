@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Fail fast, treat unset variables as errors, and show commands for debugging
+set -euo pipefail
+set -x
+
 export ARCH="x86_64"
 export WIN_ARCH="x86_64,i386"
 export OUTPUT_DIR="$HOME/compiled-files-x86_64"
@@ -71,6 +75,7 @@ do
 
   if [ "$arg" == "--configure" ];
   then
+    echo "Running configure in $(pwd)"
     ./configure \
       --enable-archs=$WIN_ARCH \
       --host=$TARGET \
@@ -201,6 +206,16 @@ do
         git apply ./android/patches/$patch
 #      fi
     done
+    # Verify configure produced a Makefile
+    if [ ! -f Makefile ] && [ ! -f GNUmakefile ]; then
+      echo "Error: configure did not produce a Makefile. Listing directory:" >&2
+      ls -la
+      if [ -f config.log ]; then
+        echo "----- config.log (tail) -----"
+        tail -n +1 config.log
+      fi
+      exit 1
+    fi
   fi
 
   if [ "$arg" == "--build" ]
@@ -210,6 +225,11 @@ do
     rm -rf $OUTPUT_DIR/lib
     rm -rf $OUTPUT_DIR/share
     rm -rf $install_dir
+    echo "PWD: $(pwd)"; ls -la
+    if [ ! -f Makefile ] && [ ! -f GNUmakefile ]; then
+      echo "Error: no Makefile found before build. Aborting." >&2
+      exit 1
+    fi
     make -j$(nproc)
   fi
 
@@ -220,12 +240,19 @@ do
     mkdir -p $OUTPUT_DIR/lib
     mkdir -p $OUTPUT_DIR/share
     mkdir -p $install_dir
+    if [ ! -f Makefile ] && [ ! -f GNUmakefile ]; then
+      echo "Error: no Makefile found for install. Did configure/build run successfully?" >&2
+      ls -la
+      exit 1
+    fi
     make install -j$(nproc)
-    cp -r $install_dir/bin/wine* $OUTPUT_DIR/bin
-    cp -r $install_dir/bin/reg* $OUTPUT_DIR/bin
-    cp -r $install_dir/bin/msi* $OUTPUT_DIR/bin
-    cp -r $install_dir/bin/notepad $OUTPUT_DIR/bin
-    cp -r $install_dir/lib/wine  $OUTPUT_DIR/lib
-    cp -r $install_dir/share/wine  $OUTPUT_DIR/share
+
+    # Copy only existing files to avoid failing on missing globs
+    bash -c 'shopt -s nullglob; for f in "$0"/bin/wine*; do cp -r "$f" "$1/bin/"; done' "$install_dir" "$OUTPUT_DIR"
+    bash -c 'shopt -s nullglob; for f in "$0"/bin/reg*; do cp -r "$f" "$1/bin/"; done' "$install_dir" "$OUTPUT_DIR"
+    bash -c 'shopt -s nullglob; for f in "$0"/bin/msi*; do cp -r "$f" "$1/bin/"; done' "$install_dir" "$OUTPUT_DIR"
+    if [ -e "$install_dir/bin/notepad" ]; then cp -r "$install_dir/bin/notepad" "$OUTPUT_DIR/bin/"; fi
+    if [ -d "$install_dir/lib/wine" ]; then cp -r "$install_dir/lib/wine"  "$OUTPUT_DIR/lib"; fi
+    if [ -d "$install_dir/share/wine" ]; then cp -r "$install_dir/share/wine"  "$OUTPUT_DIR/share"; fi
   fi
 done
