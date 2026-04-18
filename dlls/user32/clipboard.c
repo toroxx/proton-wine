@@ -25,6 +25,7 @@
 
 #define COBJMACROS
 #include <assert.h>
+#include <winsock2.h>
 #include "user_private.h"
 #include "winnls.h"
 #include "objidl.h"
@@ -32,6 +33,138 @@
 #include "wine/debug.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(clipboard);
+
+#if 1
+typedef struct {
+    int request_code;
+    int format;
+    int size;
+    void *data;
+} android_clipboard_data_t;
+
+static int send_android_clipboard_data(android_clipboard_data_t clipboard_data) {
+    WSADATA data;
+    SOCKET sock_fd;
+    struct sockaddr_in addr;
+    int net_requestcode, net_data_format, net_data_size;
+    int ret;
+
+    if ((ret = WSAStartup(MAKEWORD(2,2), &data)) != 0) {
+        TRACE( "WSAStartup failed with error %d\n", ret );
+        return 0;
+    }
+    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock_fd == INVALID_SOCKET) {
+        TRACE( "Failed to create client socket\n" );
+        return 0;
+    }
+    ZeroMemory(&addr, sizeof(addr));
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(20000);
+    ret = connect(sock_fd, (struct sockaddr *)&addr, sizeof(addr));
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to connect to server\n" );
+        return 0;
+    }
+    net_requestcode = htonl(clipboard_data.request_code);
+    net_data_format = htonl(clipboard_data.format);
+    net_data_size = htonl(clipboard_data.size);
+    ret = send(sock_fd, &net_requestcode, sizeof(net_requestcode), 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to send request code\n" );
+        return 0;
+    }
+    ret = send(sock_fd, &net_data_format, sizeof(net_data_format), 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to send Windows clipboard data format\n" );
+        return 0;
+    }
+    ret = send(sock_fd, &net_data_size, sizeof(net_data_size), 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to send Windows clipboard data size\n" );
+        return 0;
+    }
+    ret = send(sock_fd, clipboard_data.data, clipboard_data.size, 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to send Windows clipboard data\n" );
+        return 0;
+    }
+
+    ret = closesocket(sock_fd);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to close socket\n" );
+        return 0;
+    }
+
+    WSACleanup();
+
+    return 1;
+}
+
+static android_clipboard_data_t receive_android_clipboard_data() {
+    WSADATA data;
+    android_clipboard_data_t clipboard_data = {0};
+    SOCKET sock_fd;
+    struct sockaddr_in addr;
+    int net_requestcode, net_data_format, net_data_size;
+    int ret;
+
+    if ((ret = WSAStartup(MAKEWORD(2,2), &data)) != 0) {
+        TRACE( "WSAStartup failed with error %d\n", ret );
+    }
+
+    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock_fd == INVALID_SOCKET) {
+        TRACE( "Failed to create client socket\n" );
+    }
+    ZeroMemory(&addr, sizeof(addr));
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(20000);
+
+    ret = connect(sock_fd, (struct sockaddr *)&addr, sizeof(addr));
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to connect to server\n" );
+    }
+
+    clipboard_data.request_code = 3;
+    net_requestcode = htonl(clipboard_data.request_code);
+
+    ret = send(sock_fd, &net_requestcode, sizeof(net_requestcode), 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to send request code\n" );
+    }
+    ret = recv(sock_fd, &net_data_format, sizeof(net_data_format), 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to receive Android clipboard data format\n" );
+    }
+    ret = recv(sock_fd, &net_data_size, sizeof(net_data_size), 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to receive Android clipboard data size\n" );
+    }
+
+    clipboard_data.format = ntohl(net_data_format);
+    clipboard_data.size = ntohl(net_data_size);
+    clipboard_data.data = malloc(clipboard_data.size);
+
+    ret = recv(sock_fd, clipboard_data.data, clipboard_data.size, 0);
+    if (ret == SOCKET_ERROR) {
+        TRACE( "Failed to receive Android clipboard data\n" );
+    }
+
+
+    ret = closesocket(sock_fd);
+    if (ret == SOCKET_ERROR) {
+           TRACE( "Failed to close socket\n" );
+
+    }
+
+    WSACleanup();
+
+    return clipboard_data;
+}
+#endif
 
 #define MAX_ATOM_LEN 255
 
