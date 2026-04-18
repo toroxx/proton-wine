@@ -564,6 +564,9 @@ static BOOL x11drv_egl_surface_create( HWND hwnd, BOOL raw, int format, struct o
 UINT X11DRV_OpenGLInit( UINT version, const struct opengl_funcs *opengl_funcs, const struct opengl_driver_funcs **driver_funcs )
 {
     int error_base, event_base;
+#ifdef __ANDROID__
+    int wine_x11forceglx = 0;
+#endif
 
     if (version != WINE_OPENGL_DRIVER_VERSION)
     {
@@ -666,6 +669,18 @@ UINT X11DRV_OpenGLInit( UINT version, const struct opengl_funcs *opengl_funcs, c
 
     if(!X11DRV_WineGL_InitOpenglInfo()) goto failed;
 
+#ifdef __ANDROID__
+    if (getenv("WINE_X11FORCEGLX"))
+        wine_x11forceglx = atoi(getenv("WINE_X11FORCEGLX"));
+
+    if (XQueryExtension( gdi_display, "GLX", &glx_opcode, &event_base, &error_base ) || wine_x11forceglx)
+    {
+        TRACE("GLX is up and running error_base = %d\n", error_base);
+    } else {
+        ERR( "GLX extension is missing, disabling OpenGL.\n" );
+        goto failed;
+    }
+#else
     if (XQueryExtension( gdi_display, "GLX", &glx_opcode, &event_base, &error_base ))
     {
         TRACE("GLX is up and running error_base = %d\n", error_base);
@@ -673,6 +688,7 @@ UINT X11DRV_OpenGLInit( UINT version, const struct opengl_funcs *opengl_funcs, c
         ERR( "GLX extension is missing, disabling OpenGL.\n" );
         goto failed;
     }
+#endif
 
     /* In case of GLX you have direct and indirect rendering. Most of the time direct rendering is used
      * as in general only that is hardware accelerated. In some cases like in case of remote X indirect
