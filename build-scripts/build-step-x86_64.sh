@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# Fail fast, treat unset variables as errors, and show commands for debugging
 set -euo pipefail
-set -x
 
 export ARCH="x86_64"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Ensure we run from project root so Makefile/configure are found
+cd "$PROJECT_ROOT"
 export WIN_ARCH="x86_64,i386"
 export OUTPUT_DIR="$HOME/compiled-files-x86_64"
 
@@ -75,7 +77,10 @@ do
 
   if [ "$arg" == "--configure" ];
   then
-    echo "Running configure in $(pwd)"
+   # Force disabling fontconfig support to avoid cross-build failures in CI
+    WITH_FONTCONFIG="--without-fontconfig"
+    echo "Forcing configure flag: $WITH_FONTCONFIG"
+
     ./configure \
       --enable-archs=$WIN_ARCH \
       --host=$TARGET \
@@ -97,7 +102,7 @@ do
       --without-cups \
       --without-dbus \
       --without-ffmpeg \
-      --with-fontconfig \
+      $WITH_FONTCONFIG \
       --with-freetype \
       --without-gcrypt \
       --without-gettext \

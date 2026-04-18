@@ -74,7 +74,7 @@ static MEMORY_RANGE_ENTRY *memory_range_entry_array_32to64( const MEMORY_RANGE_E
         addresses[i].VirtualAddress = ULongToPtr( addresses32[i].VirtualAddress );
         addresses[i].NumberOfBytes = addresses32[i].NumberOfBytes;
     }
-
+            ULONG old_prot; // Declare old_prot here
     return addresses;
 }
 
@@ -86,7 +86,7 @@ static NTSTATUS mem_extended_parameters_32to64( MEM_EXTENDED_PARAMETER **ret_par
     MEM_EXTENDED_PARAMETER *params;
     MEM_ADDRESS_REQUIREMENTS *req;
     MEM_ADDRESS_REQUIREMENTS32 *req32 = NULL;
-
+            ULONG old_prot = *old_prot_ptr; // Initialize old_prot with the value pointed by old_prot_ptr
     if (*count && !params32) return STATUS_INVALID_PARAMETER;
 
     params = Wow64AllocateTemp( (*count + 1) * sizeof(*params) + sizeof(*req) );
